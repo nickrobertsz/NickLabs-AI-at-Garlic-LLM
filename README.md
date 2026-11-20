@@ -1,223 +1,95 @@
-<p align="center"><img src="docs/logo.svg" width="112" alt="Garlic LLM logo: a garlic bulb on a blue square"></p>
+# NickLabs AI at Garlic LLM
 
-# Garlic LLM
+**Your jailbroken PlayStation 4 consoles as local AI servers, behind one address that speaks Ollama, OpenAI and Claude CLI.**
 
-**A 9-billion-parameter language model running on a PS4. Offline.**
+[Get started](nickai/README.md) · [User guide](nickai/docs/USER-GUIDE.md) · [Report a problem](https://github.com/nickrobertsz/NickLabs-AI-at-Garlic-LLM/issues) · [Test status](https://github.com/nickrobertsz/NickLabs-AI-at-Garlic-LLM/actions)
 
-Garlic LLM is a homebrew app for the PlayStation 4. It runs [Qwen3.5-9B](https://huggingface.co/Qwen) on the console's own GPU, with no PC and no internet while it runs. It also listens, talks, and runs the Python it writes.
+> **Built on Garlic LLM, by Leonardo Alegría.** The engine that runs the model on the PS4 GPU is [Garlic LLM](https://github.com/leonardo-alegria/garlic-llm),
+> which describes itself as *"A 9-billion-parameter language model running on a PS4. Offline."* Garlic LLM is his project, not ours, and NickLabs AI is not an official part of it.
+> This repository is a fork of his: **our project is in [`nickai/`](nickai/)**. The other folders are his Garlic LLM source, kept so that our console app can be built against it (GPL-3.0).
+> Please report problems with NickLabs AI [here](https://github.com/nickrobertsz/NickLabs-AI-at-Garlic-LLM/issues), not to Garlic LLM.
 
-[Website](https://garlicllm.dev) · [Download](#install) · [Demo video](https://garlicllm.dev/#demo) · [Support the project](#support)
+## What it is
 
-![Garlic LLM answering a question on a PS4](docs/chat.png)
+Garlic LLM is a chat app you use on the console itself. NickLabs AI turns the console into a **network server**, so your tools on a computer can use the PS4's GPU:
 
-## What it does
-
-| Feature | Details |
-|---|---|
-| **Text chat** | Qwen3.5-9B at 31–39 tokens/s, and up to 43 tokens/s on code. 16K-token context. |
-| **Voice conversation** | Speak and it answers aloud (Chatterbox) in Spanish, English, Portuguese, Russian, Italian, French and German. |
-| **Dictation** | Hold a button and talk instead of typing (Parakeet TDT 0.6B v3), in 25 European languages. |
-| **Python mode** | Ask for a program. It writes MicroPython and the console runs it. |
-| **Think mode** | The model reasons before it answers. Off by default; a thought takes about half a minute. |
-
-Everything runs on the console. Nothing is sent anywhere.
-
-Speeds were measured on a base/Slim PS4. On a PS4 Pro, chat runs at up to 45 tokens/s, and a native PS4 Pro mode reaches up to 60 tokens/s; that mode comes with the [experimental version 1.20](https://garlicllm.dev/download/#h-exp). In voice mode the chat model runs at about 22 tokens/s, because the voice model takes the memory that speculative decoding uses.
-
-## Requirements
-
-- A PS4, PS4 Slim or PS4 Pro running [GoldHEN](https://github.com/GoldHEN/GoldHEN). It works on firmware 9.00, 9.04, 11.00, 11.52, 12.02, 12.50, 13.52 and 14.00.
-- About 6 GB of free space, or 12 GB if you copy the package to the console's own disk before installing it.
-- To use your voice: any ordinary microphone the console recognises.
-- To type on a real keyboard: any USB keyboard. Press OPTIONS in the chat to open the console's keyboard.
-
-Other firmware versions are not tested yet. If you try one, please [open an issue](https://github.com/leonardo-alegria/garlic-llm/issues) with the result.
-
-## Install
-
-1. Download the all-in-one package (about 5.7 GB, models inside) from [Hugging Face](https://huggingface.co/garlic-llm/garlic-llm-ps4).
-2. Copy the PKG to the console and install it like any other homebrew package (*Settings → Debug Settings → Game → Package Installer*).
-3. Open **Garlic LLM** from the home screen. The first screen loads the model; after that it needs no PC and no connection.
-
-**Updating.** Download the new package and install it over the old one. The models are inside, so there is nothing else to copy.
-
-## Controls
-
-**Chat**
-
-| Button | Action |
-|---|---|
-| ✕ | Type a message |
-| OPTIONS | Type with the console's keyboard, which also takes a USB keyboard |
-| □ (hold) | Dictate a message; release to finish |
-| ○ | Stop the answer |
-| △ | New chat |
-| ↑ ↓ or left stick | Scroll |
-| L1 | Voice mode |
-| R1 | Run the Python program in the last answer |
-| R3 or touchpad | Think mode on / off |
-| L3 | [API](#api) on / off |
-| L2 / R2 | Temperature down / up |
-
-After dictating, choose what to do with the text: ✕ send, △ edit, □ record again, ○ discard.
-
-**Keyboard**
-
-| Button | Action |
-|---|---|
-| ✕ | Type the selected key |
-| □ | Delete (hold to repeat) |
-| △ | Space |
-| L1 | Shift |
-| R1 | Emoji |
-| L2 (hold) | Dictate and add the text |
-| R2 | Send |
-| ○ | Close |
-
-**Voice mode:** hold □ to talk (this also interrupts the answer), △ starts a new chat, ○ leaves voice mode.
-
-The interface follows the console's language: English, Spanish, Portuguese or Russian.
-
-## How it works
-
-A PS4 gives homebrew no compute API and no machine-learning library, so Garlic LLM talks to the GPU directly.
-
-- **Compute kernels.** The model's operations (matrix products over 4-bit weights, attention, normalisation) are OpenCL C kernels compiled by LLVM for the console's GCN architecture. They are in [`shaders/`](shaders/).
-- **Hand-written command buffers.** The app dispatches those kernels by writing PM4 packets itself, the low-level commands a graphics driver would normally generate.
-- **Speculative decoding.** Qwen3.5's own MTP head drafts up to two tokens ahead, and the full model verifies them in one pass.
-- **Custom Q4 and Q3 weights.** The 9B is stored in two formats made for these kernels. Q4 holds 4-bit weights and is used for most matrices and the output head. Q3 holds 3-bit weights (about 3.5 bits each with their scales) and is used for the two largest matrices of each layer, the MLP's gate and up projections. Storing everything in Q4 would take about 384 MiB more, which the console does not have free.
-- **4-bit attention cache.** The attention cache is quantized to 4 bits too, which is how a 16K context fits.
-- **GPU-visible memory.** The weights live in "Garlic" memory, the PS4's name for the memory the GPU reads directly. That is where the project's name comes from.
-- **The rest is plain C.** The tokenizer, the user interface, the text renderer and the audio path run on the CPU. Python programs run on an embedded [MicroPython](https://micropython.org).
-
-The app is built with the open-source [OpenOrbis](https://github.com/OpenOrbis/OpenOrbis-PS4-Toolchain) toolchain. The techniques, the measurements and the dead ends are written up in a 147-page guide, [*Nine Billion Parameters on a PS4*](https://ko-fi.com/s/5d8050b149).
-
-## API
-
-Garlic LLM can serve an OpenAI-compatible API on your network, so that your own programs and apps use the model on the console. It is off until you turn it on.
-
-> The API is new in version 1.20.
-
-**Turn it on.** On the chat screen, press **L3** (click the left stick). The top of the screen then shows where the API listens, for example `API · 192.168.1.5:8080`. L3 again turns it off, and the app remembers the choice for the next time.
-
-**Use it.** Point any OpenAI client at that address, with `http://192.168.1.5:8080/v1` as its base URL:
-
-```bash
-curl http://192.168.1.5:8080/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -d '{"messages":[{"role":"user","content":"Hello"}],"max_tokens":128}'
+```
+ your tools ──► hub (on your computer) ──► console 1 ─ NickLabs AI app ─ Qwen3.5 on the PS4 GPU (Garlic engine)
+ OpenAI CLI/SDK   dashboard, terminal,   ├► console 2 ─ NickLabs AI app ─ Qwen3.5 on the PS4 GPU
+ Claude CLI       model manager,         └► console N ...
+ Ollama clients   agent scheduler,
+ your scripts     permanent logs
 ```
 
-- `GET /v1/models`, `POST /v1/chat/completions` (`stream: true` for server-sent events), `GET /health`.
-- The OpenAPI 3.1 description is at `GET /openapi.json` (also in [`chat/assets/openapi.json`](chat/assets/openapi.json)).
-- Replies are generated the way the chat generates its own, speculative decoding included.
-- One request runs at a time, and the chat screen is busy while it does: it says that a request is being answered, and ○ stops the reply (the client gets what was written so far, with `finish_reason: "length"`). Requests wait while the keyboard, voice mode or a Python program is open.
-- A request is a conversation of its own, so the one on the console's screen is cleared.
-- Reasoning is off. Only `n = 1` is supported; `tools`, `logprobs` and similar parameters are ignored.
-- For an API key, put it in `/data/garlic_api_key.txt` on the console. Requests then need `Authorization: Bearer <key>`. Without that file, anyone on your network can use the API while it is on, and clients that insist on a key accept any text.
-- If the screen shows `API · :8080`, the app could not read the console's address: it is in *Settings → Network → View Connection Status*.
+It has two parts:
 
-## Build from source
+* **The console app** (title `NLNA00001`, C++ on the OpenOrbis toolchain) runs on each PS4. It serves the Ollama, OpenAI and Anthropic APIs on port 11434 and runs the model through Garlic's GPU engine.
+* **The hub** (Python, runs in Docker on your computer) puts any number of consoles behind one address (`http://localhost:8080`). It adds the dashboard, the `nlag` terminal command, model import, agent scheduling, keys and permanent logs.
 
-You only need this to change the app. The build scripts are written for Windows.
+## What it can do
 
-**Tools**
+* **Any number of consoles.** The hub searches your network and registers consoles that run the app on its own, with no IP addresses to type. A console with GoldHEN's FTP server but no app yet is offered as a *possible PlayStation 4*.
+* **One address for your tools.** Ollama clients, the OpenAI CLI/SDK and the Claude CLI all point at the hub. On your own network no key is needed. Pick a console with `model@ps4-1`.
+* **Many agents on one model.** Consoles speak in parallel. One console speaks for one agent at a time, and waiting agents are served round-robin so no agent starves another. An agent stays on its console to keep its conversation warm in that console's cache. See [AGENTS.md](nickai/docs/AGENTS.md).
+* **Your Ollama models, no re-download.** `qwen3.5` models already on your computer are converted to the console format and sent to the console you choose. The hub can also download models from the Ollama registry or HuggingFace.
+* **Load, unload and switch models** from the dashboard, the terminal or the API.
+* **Permanent logs** on your computer (console system log, app journals, crash dumps, hub events). A one-click **support bundle** hides IP and MAC addresses, tokens, account ids and your home folder.
+* **Optional keys.** You can give each tool its own key, or a key that always speaks as one agent. You can also require keys on a shared network.
+* **One launcher.** `./launch.sh` (Linux and macOS) or `launch.bat` (Windows) checks Docker, starts the hub, finds your Ollama models and your consoles, sends the app to them and opens the dashboard.
 
-- Python 3 with `numpy` and `Pillow`.
-- The [OpenOrbis PS4 Toolchain](https://github.com/OpenOrbis/OpenOrbis-PS4-Toolchain) in `toolchain/OpenOrbis/PS4Toolchain/`.
-- [Zig](https://ziglang.org) in `toolchain/zig/`. Its bundled clang compiles both the C code and the GCN kernels.
-- The .NET runtime in `toolchain/dotnet/`, for OpenOrbis' package tool.
+Measured on real consoles: about **40 tokens/s** with Qwen3.5-4B and **35 tokens/s** with Qwen3.5-9B.
 
-To keep the tools somewhere else, set the `GARLIC_TOOLCHAIN` environment variable to that folder.
+## What we implemented
 
-**Build the app**
+All of this is NickLabs work and lives in [`nickai/`](nickai/):
 
-```bash
-python build_chat.py
-```
-
-This writes the PKG to `build/chat/`. Add `--upload` to also copy the package to the console over FTP. For `--upload`, set the `PS4_IP` environment variable to your console's address and start GoldHEN's FTP server.
-
-The app's data files (fonts, tokenizer tables, compiled kernels) are already in `chat/assets*`, so a build does not need the scripts in `pc/`.
-
-**Model files**
-
-A plain build keeps the weights outside the package. The app looks for each of these files first inside its package (`/app0/models`) and then in `/data` on the console:
-
-| File | Size | Contents |
+| Part | Where | What |
 |---|---|---|
-| `qwen3.5-9b-q4s.bin` | 4.32 GiB | Qwen3.5-9B |
-| `qwen3.5-9b-mtp.bin` | 0.20 GiB | The MTP head for speculative decoding |
-| `parakeet-v3-q4i.bin` | 0.33 GiB | Speech to text |
-| `chatterbox-t3.bin` | 0.29 GiB | Text to speech, first stage |
-| `chatterbox-s3gen-mf.bin` | 0.09 GiB | Text to speech, second stage |
+| Console app | `nickai/app/` | HTTP server; Ollama, OpenAI and Anthropic APIs; fair admission of agents to the single GPU; model discovery and validation against pinned SHA-256 hashes; load, unload and switch (the app relaunches itself to free GPU memory); boot and API journals. Host tests use sanitizers, a mock GPU engine and fuzzers. |
+| Hub | `nickai/hub/nlag_hub/` | Console registry and network discovery; fleet poller, router and streaming proxy; agent scheduler; model manager that converts GGUF or safetensors into Garlic's 4-bit format; FTP upload of packages and models; permanent log capture and support bundle; keys; dashboard; `nlag` CLI. |
+| Launchers | `nickai/launch.*`, `nickai/run-without-docker.*`, `nickai/nlag*` | One-command start on Linux, macOS and Windows, with Docker or without. |
+| Installer package | `nickai/hub/dist/` | `IV0000-NLNA00001_00-NICKLABSNATIVE01.pkg`, built from `nickai/app/` plus Garlic's engine. Checksum in [`nickai/SHA256SUMS`](nickai/SHA256SUMS). |
+| Tests and CI | `nickai/tests/`, `.github/workflows/nickai-tests.yml` | Hub tests with fake consoles and a browser engine for the dashboard. They run on every push. |
+| Docs | `nickai/docs/` | User guide, agents, Windows, large models, architecture, building, troubleshooting. |
 
-The code can also build a smaller app with Qwen3.5-4B (`--4b`, weights in `qwen3.5-4b-q4i.bin`). It has no speculative decoding and is not released as a package.
+## What we use from Garlic LLM
 
-Download them from [Hugging Face](https://huggingface.co/garlic-llm/garlic-llm-ps4). `python pc/upload_model.py <file>` copies a file to `/data` on the console. To build the all-in-one package instead, put the files in `models/` and add `--full` to the build command.
+From Leonardo Alegría's [Garlic LLM](https://github.com/leonardo-alegria/garlic-llm) (GPL-3.0), unchanged except where noted:
 
-The scripts that made them from the original checkpoints are in `pc/`, and each one's header describes its inputs and the file format it writes. The first conversion of the Qwen models (`pc/modal_qwen35*.py`) runs on [Modal](https://modal.com), on machines with 32 to 64 GB of memory.
+* **The GPU inference engine** (`chat/engine.c`). The console app includes it with small added hooks for memory and fault handling, and otherwise unmodified.
+* **The compiled GPU kernels and the tokenizer** (`nickai/hub/assets/kernels.bin`, `tokenizer.bin`).
+* **The 4-bit quantization format and its quantizer.** Our converter uses the engine's own quantizer and writes a `model.idx` that is byte-identical to the one Garlic ships for Qwen3.5-4B.
+* **The Qwen3.5-9B build** (mixed 4/3-bit with its speed-up head) that Garlic ships.
 
-**Repository layout**
+The full list, including Qwen3.5, the OpenOrbis toolchain, OpenSSL and the Python packages, is in [`nickai/CREDITS.md`](nickai/CREDITS.md).
 
-| Path | Contents |
-|---|---|
-| `chat/` | The app: engine, user interface, tokenizer, voice, Python runner |
-| `chat/py/` | MicroPython and its port to the console |
-| `shaders/` | The GPU kernels |
-| `pc/` | Converters for the models, reference implementations in NumPy, and the scripts that build the app's data files |
-| `build_chat.py` | Builds the PKG |
+## What has been tested, and what has not
 
-## Troubleshooting
+**Verified by the author:**
 
-- **"Couldn't start".** A model file is missing or incomplete. Install the package again. With a build from source, check the files in `/data` against the table above.
-- **Dictation hears nothing.** Check that the console sees your microphone, and keep □ held while you speak.
-- **Anything else.** The app writes a log to `/data/ps4ai_log.txt`. Attach it when you [open an issue](https://github.com/leonardo-alegria/garlic-llm/issues).
+* The Linux Docker flow on a clean machine: build, start, network detection, automatic console registration, and chat through the hub.
+* Every feature on **two real PS4 consoles**.
+* The hub tests (26 tests, also run by CI on every push) and the console app's host tests in this fork layout.
 
-## Questions
+**Not tested yet. Reports are welcome, so please attach the support bundle from Dashboard → Logs:**
 
-**Does it need internet?** No. The model, the voices and the speech recognition run on the console.
+* **Windows**: `launch.bat`, `launch.ps1`, `run-without-docker.ps1`, `nlag.cmd`. See [WINDOWS.md](nickai/docs/WINDOWS.md).
+* **macOS**: `launch.sh` on macOS.
 
-**Does it run on a PS4 Pro?** Yes, at up to 45 tokens/s. The Pro runs Garlic as if it were a base PS4. A native PS4 Pro mode, which uses the Pro's full GPU, reaches up to 60 tokens/s; it comes with the [experimental version 1.20](https://garlicllm.dev/download/#h-exp).
+**Not supported (known limits):**
 
-**And on a PS5?** No. Garlic LLM is written for the PS4's GPU and system software.
+* One model per console, at most about 4.6 GB of weights. Qwen3.5 only, with a 16K-token context.
+* Qwen3.5-0.8B and 2B do not fit the console's tile layout. 27B and larger need more memory than one console has. Splitting one model across several consoles is not implemented yet; [LARGE-MODELS.md](nickai/docs/LARGE-MODELS.md) explains what it would take.
+* Sampling supports temperature and seed only. No embeddings. A console answers one request at a time.
 
-**Can it harm my console?** It is an ordinary homebrew app and contains no exploit. It needs GoldHEN, which you install at your own risk.
+## Quick start
 
-**Is this the first AI on a PS4's GPU?** As far as I know, yes. I found no earlier public project that runs a language model on the PS4's GPU. If you know of one, please [open an issue](https://github.com/leonardo-alegria/garlic-llm/issues).
+1. Each PS4 needs GoldHEN with its **FTP server enabled** (port 2121) and must be on the same network as your computer.
+2. Run `./launch.sh` in `nickai/` (Windows: double-click `nickai\launch.bat`).
+3. Install the app on each console when the launcher asks you to, open `http://localhost:8080` and load a model.
 
-## Support
+The full steps are in [`nickai/README.md`](nickai/README.md) and the [user guide](nickai/docs/USER-GUIDE.md).
 
-Garlic LLM is free and open source. If you want to see more of it (more consoles tested, faster kernels), you can help fund the work:
+## Licence
 
-- [PayPal](https://www.paypal.com/donate/?business=leonardoalegria2002%40gmail.com&currency_code=USD)
-- [Ko-fi](https://ko-fi.com/leonardoalegria)
-- Buy the guide, [*Nine Billion Parameters on a PS4*](https://ko-fi.com/s/5d8050b149) (PDF, pay what you want from 19 USD)
-
-Bug reports and test results from other consoles help just as much.
-
-## Licence and credits
-
-The app's code is licensed under the [GNU General Public License v3.0](LICENSE). The models and third-party components keep their own licences:
-
-| Component | Author | Licence |
-|---|---|---|
-| Qwen3.5-9B and Qwen3.5-4B | Alibaba Qwen | Apache-2.0 |
-| Chatterbox (text to speech) | Resemble AI | MIT |
-| Parakeet TDT 0.6B v3 (speech to text) | NVIDIA | CC-BY-4.0 |
-| MicroPython | The MicroPython project | MIT |
-| Twemoji | Twitter, Inc. and other contributors | CC-BY-4.0 |
-| Fonts: Selawik, Noto, Arimo, Inconsolata, Cascadia Mono | Their authors | SIL OFL 1.1 |
-| DejaVu Sans | Its authors | Bitstream Vera licence and public domain |
-
-The complete notices are in [`CREDITS.md`](CREDITS.md) and ship inside the app.
-
-Garlic LLM is built with the [OpenOrbis PS4 Toolchain](https://github.com/OpenOrbis/OpenOrbis-PS4-Toolchain) and runs on consoles with [GoldHEN](https://github.com/GoldHEN/GoldHEN). Both are third-party projects by their own authors, and Garlic LLM would not exist without them.
-
-## Contact
-
-Garlic LLM is built by [Leonardo Alegría](https://www.linkedin.com/in/leonardoalegria/). Questions, collaborations and press: [leo@garlicllm.dev](mailto:leo@garlicllm.dev). Bugs and test results go to [GitHub issues](https://github.com/leonardo-alegria/garlic-llm/issues).
-
----
-
-Not affiliated with or endorsed by Sony Interactive Entertainment. PlayStation and PS4 are trademarks of their owners.
+GPL-3.0, the same as Garlic LLM ([LICENSE](LICENSE)). Not affiliated with Sony Interactive Entertainment, Alibaba, Docker or Ollama. Use this only on consoles and with software you are entitled to run.

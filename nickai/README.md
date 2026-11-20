@@ -27,7 +27,7 @@ a small **hub** on your computer gives you one dashboard, one terminal command a
 
    It checks Docker (and offers to install or update it), starts the hub, finds your Ollama models and your consoles, and opens the dashboard.
 3. For a console that does not have the app yet, the launcher sends the installer to it and tells you what to press on the PS4
-   (*Settings → Debug Settings → Game → Package Installer → NickLabs AI on Garlic LLM*), then start the app.
+   (*Settings → Debug Settings → Game → Package Installer → NickLabs AI on Garlic LLM*; the package still uses the earlier title, with "on"), then start the app.
 4. Open the dashboard (`http://localhost:8080`), add a model on the **Models** page (or accept the offered Qwen3.5-4B), send it to a console and press **Load**.
 
 Nothing asks you for keys on your own network.

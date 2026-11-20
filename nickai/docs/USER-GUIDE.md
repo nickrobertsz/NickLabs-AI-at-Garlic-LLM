@@ -1,4 +1,4 @@
-# NickLabs AI on Garlic LLM: user guide
+# NickLabs AI at Garlic LLM: user guide
 
 ## 1. What you get
 
@@ -10,7 +10,7 @@
  your scripts     permanent logs
 ```
 
-* The **app** (title *NickLabs AI on Garlic LLM*) runs on each PlayStation 4 and serves Ollama, OpenAI and Anthropic (Claude CLI) APIs itself, on port 11434.
+* The **app** of NickLabs AI at Garlic LLM (the current installer package still lists it under its earlier title *NickLabs AI on Garlic LLM*) runs on each PlayStation 4 and serves Ollama, OpenAI and Anthropic (Claude CLI) APIs itself, on port 11434.
 * The **hub** runs in Docker on your computer. It is optional for a single console (you can talk to the console directly) but it is what gives you the dashboard, N consoles behind one address,
   agents, model import from Ollama, key management and the permanent log.
 * A console keeps **one model in GPU memory at a time** (about 4.6 GB of weights). Different consoles run different models, or the same one, at the same time.
@@ -35,7 +35,7 @@ add it back until you press **Re-add consoles I removed** (terminal: `nlag conso
 
 ### Installing the app on a console
 On a console card press **More → Send app package** (terminal: `nlag consoles install ps4-1`). The package is copied to the console and verified byte for byte. Then, on the PlayStation 4:
-*Settings → Debug Settings → Game → Package Installer → NickLabs AI on Garlic LLM → install*, and start the app from the home screen (it shows no picture; the dashboard card turns green).
+*Settings → Debug Settings → Game → Package Installer → NickLabs AI on Garlic LLM → install* (the package still uses the earlier title, with "on"), and start the app from the home screen (it shows no picture; the dashboard card turns green).
 Installing over an older version keeps your models and settings. Do not install anything while a generation is running.
 
 ## 3. The dashboard
