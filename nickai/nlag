@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# Terminal control of NickLabs AI on Garlic LLM:  ./nlag status | ./nlag setup | ./nlag --help
+# It runs the command inside the hub container, so nothing but Docker is needed on your computer.
+cd "$(cd "$(dirname "$0")" && pwd)"
+T="-T"; [ "${1:-}" = "setup" ] && [ -t 0 ] && T=""
+exec docker compose exec $T hub python -m nlag_hub.cli "$@"

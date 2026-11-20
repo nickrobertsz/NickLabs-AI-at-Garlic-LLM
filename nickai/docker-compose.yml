@@ -1,0 +1,20 @@
+# NickLabs AI on Garlic LLM - the hub (dashboard, API for Ollama/OpenAI/Claude CLI, model manager, permanent logger).
+# Start it with ./launch.sh (Linux/macOS) or launch.bat (Windows); it fills in the variables below.
+name: nickai-on-garlic
+services:
+  hub:
+    build: ./hub
+    image: nickai-on-garlic/hub:latest
+    restart: unless-stopped
+    user: "${NLAG_UID:-1000}:${NLAG_GID:-1000}"        # files in ./data belong to you, not to root
+    ports:
+      - "${NLAG_PORT:-8080}:8080"
+    environment:
+      NLAG_API_KEY: "${NLAG_API_KEY:-}"            # optional admin key
+      NLAG_SCAN_NETS: "${NLAG_SCAN_NETS:-}"        # the LAN to search for consoles (the launcher fills it in)
+      NLAG_PUBLIC_URL: "${NLAG_PUBLIC_URL:-}"      # this computer's address as other machines see it (shown in the dashboard examples)
+      NLAG_CAPTURE: "${NLAG_CAPTURE:-1}"           # 0 = do not record console logs (only if another program already reads them)
+    volumes:
+      - ./data:/data                                   # logs, registered consoles, converted models: plain files on your computer
+      - ./import:/import:ro                            # drop .gguf files or model folders here to import them
+      - "${OLLAMA_MODELS_DIR:-./import/no-ollama}:/ollama-models:ro"   # your Ollama models (found automatically by the launcher)

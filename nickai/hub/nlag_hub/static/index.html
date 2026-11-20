@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="dark light">
+<title>NickLabs AI on Garlic LLM</title><link rel="stylesheet" href="/static/style.css"></head>
+<body>
+<header><div><h1>NickLabs AI on Garlic LLM</h1><p class="muted" id="subtitle">Your PlayStation 4 consoles as local AI servers</p></div>
+<nav id="tabs"><a href="#consoles">Consoles</a><a href="#models">Models</a><a href="#playground">Playground</a><a href="#agents">Agents</a><a href="#logs">Logs</a><a href="#settings">Settings</a></nav></header>
+<p id="notice" role="status" aria-live="polite"></p>
+<main>
+<section data-view="consoles">
+  <div class="stats" id="stats"></div>
+  <div id="setup-guide" class="panel" hidden></div>
+  <div id="discovery" class="panel" hidden></div>
+  <div id="console-cards" class="cards"></div>
+  <details class="panel" id="add-panel"><summary>Add a console</summary>
+    <form id="add-form" class="row"><label>IP address or host name<input id="add-host" required placeholder="192.168.1.50"></label><label>Name (optional)<input id="add-name" placeholder="Living room"></label>
+      <details><summary class="muted">Ports</summary><div class="row"><label>App API<input id="add-api" type="number" value="11434"></label><label>FTP<input id="add-ftp" type="number" value="2121"></label><label>Log (klog)<input id="add-klog" type="number" value="3232"></label></div></details>
+      <button>Add console</button></form>
+    <p class="muted">The console must be jailbroken and running an FTP server (GoldHEN: enable the FTP server, port 2121). Add as many consoles as you own; each one is an independent server.</p>
+  </details>
+</section>
+
+<section data-view="models" hidden>
+  <div class="panel"><h2>Models on your computer</h2><p class="muted">Models converted for the consoles. Pick a console and send; it is checked and installed there, then load it from the Consoles page.</p>
+    <div id="library"></div></div>
+  <div class="panel"><h2>Add a model</h2>
+    <div class="row"><label>Send to<select id="imp-targets" multiple size="4"></select></label>
+      <div class="col">
+        <h3>From your Ollama</h3><p class="muted" id="ollama-note">Models already downloaded with Ollama on this computer are converted, with no new download. Only Qwen3.5 models work (the Garlic engine runs that family).</p><div id="ollama-local"></div>
+        <h3>Download an Ollama model</h3><form id="imp-ollama" class="row"><label>Model<input id="imp-ollama-ref" placeholder="qwen3.5:4b" required></label><button>Download and convert</button></form>
+        <h3>From HuggingFace</h3><form id="imp-hf" class="row"><label>Repository<input id="imp-hf-ref" placeholder="Qwen/Qwen3.5-4B" required></label><button>Download and convert</button></form>
+      </div></div>
+    <p class="muted">A console keeps the whole model in its GPU memory: about 4.6 GB of weights fit (Qwen3.5 up to 4B, plus the 9B build shipped with the app). Bigger models are refused with an explanation.</p></div>
+  <div class="panel"><h2>Jobs</h2><div id="jobs"></div></div>
+</section>
+
+<section data-view="playground" hidden>
+  <div class="panel"><p class="muted">Each chat talks to the console you choose and speaks as its own agent. One console answers one request at a time; different consoles answer at the same time.</p>
+  <p id="pw" class="warning" role="status" hidden></p>
+  <div id="panes" class="panes"></div>
+  <form id="chat" class="row"><label class="grow">Message (sent to every chat at once)<textarea id="prompt" rows="2" required></textarea></label>
+    <label>Token limit<input id="tokens" type="number" value="256" min="1" max="8192"></label><button id="send">Send</button><button type="button" id="stop" class="quiet" disabled>Stop</button><button type="button" id="addpane" class="quiet">+ chat</button><button type="button" id="clear" class="quiet">Clear</button></form></div>
+</section>
+
+<section data-view="agents" hidden>
+  <div class="panel"><h2>Who is speaking</h2><p class="muted">Agents are named by the <code>X-Agent-Id</code> header (or the OpenAI <code>user</code> field). A console serves one agent at a time and rotates between waiting agents; consoles run in parallel.</p><div id="agent-cards" class="cards"></div></div>
+  <div class="panel"><h2>Recent agents</h2><div id="agent-table"></div></div>
+</section>
+
+<section data-view="logs" hidden>
+  <div class="panel"><h2>Logs are saved on this computer, always</h2><p class="muted">Everything each console prints and what this hub does is recorded under the data folder. If something fails, download the support bundle and send it (or give it to your AI agent).</p>
+    <div class="row"><a class="btn" id="bundle" href="/hub/v1/support-bundle">Download support bundle (private data hidden)</a><a class="btn quiet" id="bundle-raw" href="/hub/v1/support-bundle?redact=0">without hiding addresses</a></div><div id="capture-health"></div></div>
+  <div class="panel"><div class="row"><label>File<select id="log-file"></select></label><label>Lines<input id="log-n" type="number" value="200" min="10" max="2000"></label><label class="check"><input type="checkbox" id="log-follow" checked> follow</label></div><pre id="log-view"></pre></div>
+</section>
+
+<section data-view="settings" hidden>
+  <div class="panel" id="tools-panel"><h2>Connect your tools: OpenAI CLI, Claude CLI, Ollama</h2>
+    <p class="muted">On your own network <b>you do not need a key</b>: wherever a tool asks for an API key, type any text, for example <code>local</code>. Create a key below only if you want a separate key per tool, or a key that <b>always speaks as one agent</b> (its requests are attributed to that agent, whatever the client sends).</p>
+    <div class="row"><label class="grow">Hub address as your tools see it<input id="hub-url"></label><label>Model for the examples<select id="tool-model"></select></label></div>
+    <div class="tabs" id="tool-tabs" role="tablist"><button type="button" class="quiet" data-tool="openai">OpenAI CLI / SDK</button><button type="button" class="quiet" data-tool="claude">Claude CLI</button><button type="button" class="quiet" data-tool="ollama">Ollama</button><button type="button" class="quiet" data-tool="curl">curl</button></div>
+    <div id="tool-snippet"></div>
+    <h3>Create a key (optional)</h3>
+    <form id="key-form" class="row"><label>Name<input id="key-name" placeholder="claude-cli" required></label><label>Only for this agent (optional)<input id="key-agent" placeholder="story-teller"></label><button>Create key</button></form>
+    <div id="new-key" class="panel" hidden><p><b>Your new key</b> (shown once, copy it now):</p><pre id="new-key-value"></pre><div class="row"><button type="button" id="copy-key">Copy key</button><button type="button" class="quiet" id="use-key">Use it in the examples above</button></div></div>
+    <div id="key-table"></div>
+  </div>
+  <div class="panel"><h2>Network and access</h2><form id="settings-form" class="col">
+    <label class="check"><input type="checkbox" id="set-discovery"> Find consoles on my network automatically and add them</label>
+    <label>Networks that may use this hub without a key (one per line)<textarea id="set-nets" rows="4"></textarea></label>
+    <label class="check"><input type="checkbox" id="set-require"> Require a key even on those networks (needs an admin key)</label>
+    <label>Admin key (opens this dashboard from outside the networks above; leave empty to keep)<input id="set-key" type="password" autocomplete="new-password"></label>
+    <label>Agent routing<select id="set-routing"><option value="sticky">sticky: an agent keeps its console (warm cache)</option><option value="spread">spread: always the least busy console</option></select></label>
+    <label>Loading models on demand<select id="set-autoload"><option value="idle-only">a request may load its model on an idle console</option><option value="never">never: only when I press Load</option></select></label>
+    <label>Keep logs for (days)<input id="set-days" type="number" min="1"></label><label>Log size cap (MB)<input id="set-mb" type="number" min="10"></label>
+    <button>Save</button></form></div>
+</section>
+</main>
+<script src="/static/app.js"></script>
+</body></html>

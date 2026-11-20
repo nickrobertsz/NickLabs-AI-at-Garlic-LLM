@@ -1,0 +1,58 @@
+// Dashboard of the hub, driven by tests/test_hub.py::Dashboard against a real hub with fake consoles.
+import {createRequire} from 'node:module';
+import assert from 'node:assert/strict';
+const require = createRequire(process.env.JSDOM_FROM || import.meta.url);
+const {JSDOM} = require('jsdom');
+const BASE = process.env.HUB_URL;
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const log = []; let failed = false; const errors = [];
+const check = (name, fn) => { try { fn(); log.push('PASS ' + name); } catch (e) { failed = true; log.push('FAIL ' + name + ': ' + e.message); } };
+const dom = await JSDOM.fromURL(BASE + '/', {runScripts: 'dangerously', resources: 'usable', pretendToBeVisual: true,
+  beforeParse(w) { w.fetch = (u, o) => fetch(new URL(u, BASE), o); w.addEventListener('error', e => errors.push(e.message)); w.confirm = () => true; w.prompt = () => null; }});
+const w = dom.window; await new Promise(r => w.addEventListener('load', r));
+const $ = id => w.document.getElementById(id);
+const until = async (fn, ms = 12000) => { const end = Date.now() + ms; while (Date.now() < end) { try { if (fn()) return true; } catch (_) {} await sleep(150); } return false; };
+await until(() => w.document.querySelectorAll('#console-cards .card').length === 3);
+check('every registered console has a card (any number of consoles)', () => assert.equal(w.document.querySelectorAll('#console-cards .card').length, 3));
+check('stats count consoles online', () => assert.match($('stats').textContent, /Consoles online3 \/ 3/));
+const card = id => w.document.querySelector(`[data-console="${id}"]`);
+const sel = card('ps4-1').querySelector('select'); sel.value = 'qwen3.5-9b-garlic'; sel.dispatchEvent(new w.Event('change', {bubbles: true}));
+card('ps4-1').querySelector('[data-act=load]').click();
+await until(() => /Loaded: qwen3.5-9b-garlic/.test(card('ps4-1').textContent));
+check('console reports the model loaded', () => assert.match(card('ps4-1').textContent, /Loaded: qwen3.5-9b-garlic/));
+card('ps4-1').querySelector('[data-act=unload]').click();
+await until(() => /No model loaded/.test(card('ps4-1').textContent), 15000);
+check('Unload frees it', () => assert.match(card('ps4-1').textContent, /No model loaded/));
+// playground: independent chats, warnings
+w.location.hash = '#playground'; await until(() => w.document.querySelectorAll('.pane').length === 2);
+const p = i => w.document.querySelectorAll('.pane')[i];
+const setModel = (i, v) => { const s = p(i).querySelector('[data-p=model]'); s.value = v; s.dispatchEvent(new w.Event('change', {bubbles: true})); };
+setModel(0, 'qwen3.5-4b-garlic@ps4-1'); setModel(1, 'qwen3.5-4b-garlic@ps4-2'); await sleep(300);
+check('two chats on two consoles: no warning', () => assert.ok($('pw').hidden, $('pw').textContent));
+p(0).querySelector('[data-p=load]').click(); p(1).querySelector('[data-p=load]').click();
+await until(() => /loaded: qwen3.5-4b-garlic/.test(p(0).textContent) && /loaded: qwen3.5-4b-garlic/.test(p(1).textContent));
+check('each chat loads its own console', () => { assert.match(p(0).querySelector('[data-p=state]').textContent, /loaded: qwen3.5-4b-garlic/); assert.match(p(1).querySelector('[data-p=state]').textContent, /loaded: qwen3.5-4b-garlic/); });
+$('addpane').click(); await sleep(200);
+check('more chats can be added', () => assert.equal(w.document.querySelectorAll('.pane').length, 3));
+setModel(2, 'qwen3.5-4b-garlic@ps4-1'); await sleep(300);
+check('same model on two chats warns that they take turns', () => assert.match($('pw').textContent, /same model.*take turns/));
+$('prompt').value = 'hello'; $('chat').requestSubmit();
+await until(() => [...w.document.querySelectorAll('.bubble.assistant')].filter(b => /hi from agent-/.test(b.textContent)).length >= 3);
+check('every chat answers as its own agent', () => { const t = [...w.document.querySelectorAll('.bubble.assistant')].map(b => b.textContent).join(' '); assert.match(t, /hi from agent-1/); assert.match(t, /hi from agent-2/); assert.match(t, /hi from agent-3/); });
+// settings: keys
+w.location.hash = '#settings'; await until(() => $('tool-snippet').textContent.length > 20);
+check('settings say no key is needed on the network', () => assert.match($('tools-panel').textContent, /you do not need a key/));
+check('OpenAI snippet shows OPENAI_BASE_URL and a usable key', () => { assert.match($('snip').textContent, /OPENAI_BASE_URL/); assert.match($('snip').textContent, /OPENAI_API_KEY="local"/); assert.match($('snip').textContent, /\/v1"/); });
+w.document.querySelector('[data-tool=claude]').click();
+check('Claude CLI tab shows the Anthropic variables', () => { assert.match($('snip').textContent, /ANTHROPIC_BASE_URL/); assert.match($('snip').textContent, /ANTHROPIC_AUTH_TOKEN="local"/); assert.match($('snip').textContent, /\nclaude$/); });
+$('key-name').value = 'claude-cli'; $('key-agent').value = 'narrator'; $('key-form').requestSubmit();
+await until(() => !$('new-key').hidden);
+const key = $('new-key-value').textContent;
+check('creating a key shows it once', () => { assert.match(key, /^nlag-/); assert.ok(!$('new-key').hidden); });
+await until(() => /narrator/.test($('key-table').textContent));
+check('the key is listed with its agent and the snippet uses it', () => { assert.match($('key-table').textContent, /narrator/); assert.ok($('snip').textContent.includes(key)); });
+check('the key itself is not kept in the page after the list refreshes', () => assert.ok(!$('key-table').textContent.includes(key)));
+w.document.querySelector('[data-act=revoke-key]').click(); await until(() => /No keys yet/.test($('key-table').textContent));
+check('a key can be revoked', () => assert.match($('key-table').textContent, /No keys yet/));
+check('no script errors', () => assert.deepEqual(errors, []));
+console.log(log.join('\n')); w.close(); process.exit(failed ? 1 : 0);
