@@ -1,6 +1,12 @@
-# NickLabs AI on Garlic LLM
+# NickLabs AI at Garlic LLM
 
-Turn your jailbroken PlayStation 4 consoles into local AI servers. Each console runs a Qwen3.5 model on its own GPU (through the [Garlic LLM](https://github.com/leonardo-alegria/garlic-llm) engine);
+**Project:** [nickrobertsz/NickLabs-AI-at-Garlic-LLM](https://github.com/nickrobertsz/NickLabs-AI-at-Garlic-LLM) · [Report a problem](https://github.com/nickrobertsz/NickLabs-AI-at-Garlic-LLM/issues) · [Test status](https://github.com/nickrobertsz/NickLabs-AI-at-Garlic-LLM/actions)
+
+> **Garlic LLM is not ours.** The engine that runs the model on the PS4 GPU is [Garlic LLM](https://github.com/leonardo-alegria/garlic-llm) by **Leonardo Alegría**.
+> NickLabs AI is a separate add-on that lives in this `nickai/` folder of a fork of his repository; everything outside `nickai/` (apart from the test workflow `.github/workflows/nickai-tests.yml`) is his work.
+> Please send problems with this add-on [here](https://github.com/nickrobertsz/NickLabs-AI-at-Garlic-LLM/issues), not to Garlic LLM.
+
+Turn your jailbroken PlayStation 4 consoles into local AI servers. Each console runs a Qwen3.5 model on its own GPU (through Leonardo Alegría's [Garlic LLM](https://github.com/leonardo-alegria/garlic-llm) engine);
 a small **hub** on your computer gives you one dashboard, one terminal command and one address that speaks **Ollama, OpenAI and Claude CLI** to all of them.
 
 * **Any number of consoles.** Plug in a third one and it is found automatically.
@@ -51,5 +57,5 @@ Nothing asks you for keys on your own network.
 
 ## Licence and credits
 
-GPL-3.0, like Garlic LLM, which this project builds on and ships a modified copy of its engine inside the console app. See [CREDITS.md](CREDITS.md). Not affiliated with Sony or Alibaba;
+GPL-3.0, like [Garlic LLM](https://github.com/leonardo-alegria/garlic-llm) by Leonardo Alegría, which this project builds on and ships a modified copy of its engine inside the console app. See [CREDITS.md](CREDITS.md). NickLabs AI is not an official part of Garlic LLM. Not affiliated with Sony or Alibaba;
 use only on consoles and with software you are entitled to run.
